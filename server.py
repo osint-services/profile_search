@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .main import search_profile
+from .profile_search import search_profile
 
 app = FastAPI()
 

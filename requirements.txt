@@ -1,2 +1,4 @@
-socid-extractor
 fastapi[standard]
+httpx
+tweepy
+python-dotenv
