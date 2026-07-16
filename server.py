@@ -16,6 +16,11 @@ app.add_middleware(
     allow_headers=['*']
 )
 
+@app.get('/healthz')
+def healthz():
+    return {"status": "ok"}
+
+
 @app.get('/focus')
 def find_profile(url: str):
     profile_info = search_profile(url)
