@@ -34,3 +34,5 @@ curl "http://127.0.0.1:8000/focus?url=https://twitter.com/Twitter"
 ```
 
 The service returns JSON metadata for the profile found at the provided URL.
+
+Provider failures are returned as actionable HTTP responses. For example, depleted X API credits return `402`, rate limiting returns `429`, invalid project access returns `502`, and a missing profile returns `404`. The response detail explains the corrective action without exposing credentials or raw provider internals.
