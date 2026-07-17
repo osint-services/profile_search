@@ -31,12 +31,18 @@ def search_profile(arg_url: str) -> dict:
         user_fields=[
             "created_at",
             "description",
+            "entities",
             "location",
+            "most_recent_tweet_id",
+            "pinned_tweet_id",
+            "profile_banner_url",
             "profile_image_url",
             "protected",
             "public_metrics",
             "url",
             "verified",
+            "verified_type",
+            "withheld",
         ],
     )
 
@@ -45,15 +51,25 @@ def search_profile(arg_url: str) -> dict:
         return {}
 
     return {
-        "id": user.id,
+        "id": str(user.id),
         "name": user.name,
         "username": user.username,
         "bio": user.description,
         "location": getattr(user, "location", None),
+        "entities": getattr(user, "entities", None),
+        "most_recent_tweet_id": getattr(user, "most_recent_tweet_id", None),
+        "pinned_tweet_id": getattr(user, "pinned_tweet_id", None),
+        "profile_banner_url": getattr(user, "profile_banner_url", None),
         "profile_image_url": getattr(user, "profile_image_url", None),
         "website": getattr(user, "url", None),
         "verified": getattr(user, "verified", None),
+        "verified_type": getattr(user, "verified_type", None),
         "protected": getattr(user, "protected", None),
-        "created_at": str(getattr(user, "created_at", None)),
+        "withheld": getattr(user, "withheld", None),
+        "created_at": (
+            str(user.created_at)
+            if getattr(user, "created_at", None) is not None
+            else None
+        ),
         "metrics": getattr(user, "public_metrics", None),
     }
