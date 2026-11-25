@@ -1,9 +1,9 @@
 import os
 
-import tweepy
+import httpx
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
-from .profile_search import search_profile
+from .profile_search import InvalidProfileURL, InvalidXResponse, search_profile
 
 app = FastAPI()
 
@@ -12,14 +12,9 @@ origins = [
 ]
 
 
-def describe_x_api_error(exc: Exception) -> tuple[int, str]:
-    provider_status = getattr(getattr(exc, "response", None), "status_code", None)
-    api_messages = getattr(exc, "api_messages", None) or []
-    provider_message = " ".join(str(message) for message in api_messages).strip()
-    if not provider_message:
-        provider_message = str(exc).strip()
-
-    if provider_status == 402 or "credits depleted" in provider_message.lower():
+def describe_x_api_error(response: httpx.Response) -> tuple[int, str]:
+    provider_status = response.status_code
+    if provider_status == 402 or "credits depleted" in response.text.lower():
         return (
             status.HTTP_402_PAYMENT_REQUIRED,
             "X API credits are depleted. Add credits or update the X developer project before inspecting profiles.",
@@ -76,6 +71,13 @@ def find_profile(url: str):
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=str(exc),
         ) from exc
-    except tweepy.TweepyException as exc:
-        response_status, detail = describe_x_api_error(exc)
+    except InvalidProfileURL as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except httpx.HTTPStatusError as exc:
+        response_status, detail = describe_x_api_error(exc.response)
         raise HTTPException(status_code=response_status, detail=detail) from exc
+    except (httpx.RequestError, InvalidXResponse) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="X profile lookup failed. Check the provider status and try again.",
+        ) from exc
