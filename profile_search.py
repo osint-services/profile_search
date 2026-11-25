@@ -1,17 +1,48 @@
 import os
+import re
+from datetime import datetime
 from pathlib import Path
-
-import tweepy
-from dotenv import load_dotenv
 from urllib.parse import urlparse
-from typing import Any
 
-# Load environment variables from .env file
+import httpx
+from dotenv import load_dotenv
+
 load_dotenv(Path(__file__).parent / ".env")
 
+USER_FIELDS = ",".join((
+    "created_at",
+    "description",
+    "entities",
+    "location",
+    "most_recent_tweet_id",
+    "pinned_tweet_id",
+    "profile_banner_url",
+    "profile_image_url",
+    "protected",
+    "public_metrics",
+    "url",
+    "verified",
+    "verified_type",
+    "withheld",
+))
+
+
+class InvalidProfileURL(ValueError):
+    pass
+
+
+class InvalidXResponse(Exception):
+    pass
+
+
 def x_username_from_url(url: str) -> str:
-    path = urlparse(url).path.strip("/")
-    return path.split("/")[0]
+    try:
+        username = urlparse(url).path.strip("/").split("/")[0]
+    except ValueError as exc:
+        raise InvalidProfileURL("Provide a URL with a valid X username.") from exc
+    if not re.fullmatch(r"[A-Za-z0-9_]{1,15}", username):
+        raise InvalidProfileURL("Provide a URL with a valid X username.")
+    return username
 
 
 def search_profile(arg_url: str) -> dict:
@@ -23,53 +54,39 @@ def search_profile(arg_url: str) -> dict:
         )
 
     username = x_username_from_url(arg_url)
-
-    client = tweepy.Client(bearer_token=bearer_token)
-
-    resp: Any = client.get_user(
-        username=username,
-        user_fields=[
-            "created_at",
-            "description",
-            "entities",
-            "location",
-            "most_recent_tweet_id",
-            "pinned_tweet_id",
-            "profile_banner_url",
-            "profile_image_url",
-            "protected",
-            "public_metrics",
-            "url",
-            "verified",
-            "verified_type",
-            "withheld",
-        ],
+    response = httpx.get(
+        f"https://api.x.com/2/users/by/username/{username}",
+        headers={"Authorization": f"Bearer {bearer_token}"},
+        params={"user.fields": USER_FIELDS},
+        timeout=15,
     )
-
-    user = resp.data
-    if not user:
-        return {}
-
-    return {
-        "id": str(user.id),
-        "name": user.name,
-        "username": user.username,
-        "bio": user.description,
-        "location": getattr(user, "location", None),
-        "entities": getattr(user, "entities", None),
-        "most_recent_tweet_id": getattr(user, "most_recent_tweet_id", None),
-        "pinned_tweet_id": getattr(user, "pinned_tweet_id", None),
-        "profile_banner_url": getattr(user, "profile_banner_url", None),
-        "profile_image_url": getattr(user, "profile_image_url", None),
-        "website": getattr(user, "url", None),
-        "verified": getattr(user, "verified", None),
-        "verified_type": getattr(user, "verified_type", None),
-        "protected": getattr(user, "protected", None),
-        "withheld": getattr(user, "withheld", None),
-        "created_at": (
-            str(user.created_at)
-            if getattr(user, "created_at", None) is not None
-            else None
-        ),
-        "metrics": getattr(user, "public_metrics", None),
-    }
+    response.raise_for_status()
+    try:
+        payload = response.json()
+        user = payload.get("data")
+        if user is None:
+            return {}
+        created_at = user.get("created_at")
+        if created_at is not None:
+            created_at = str(datetime.fromisoformat(created_at.replace("Z", "+00:00")))
+        return {
+            "id": str(user["id"]),
+            "name": user["name"],
+            "username": user["username"],
+            "bio": user.get("description"),
+            "location": user.get("location"),
+            "entities": user.get("entities"),
+            "most_recent_tweet_id": user.get("most_recent_tweet_id"),
+            "pinned_tweet_id": user.get("pinned_tweet_id"),
+            "profile_banner_url": user.get("profile_banner_url"),
+            "profile_image_url": user.get("profile_image_url"),
+            "website": user.get("url"),
+            "verified": user.get("verified"),
+            "verified_type": user.get("verified_type"),
+            "protected": user.get("protected"),
+            "withheld": user.get("withheld"),
+            "created_at": created_at,
+            "metrics": user.get("public_metrics"),
+        }
+    except (AttributeError, KeyError, TypeError, ValueError) as exc:
+        raise InvalidXResponse("X returned invalid profile data.") from exc

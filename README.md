@@ -1,13 +1,13 @@
 # profile_search
 
-`profile_search` is an OSINT microservice that searches the profile of a given URL and returns metadata found at that site using [Tweepy](https://docs.tweepy.org/en/stable/).
+`profile_search` is an OSINT microservice that searches the profile of a given URL and returns metadata found at that site from the [X API](https://docs.x.com/x-api/users/lookup/introduction).
 
 ## Requirements
-- Python 3.9 or higher
+- Python 3.11 or higher
 
 ### Tech Stack
 - [FastAPI](https://fastapi.tiangolo.com/)
-- [Tweepy](https://docs.tweepy.org/en/stable/)
+- [HTTPX](https://www.python-httpx.org/)
 - [python-dotenv](https://saurabh-kumar.com/python-dotenv/)
 
 ### Setup
@@ -15,7 +15,7 @@
 2. Activate the virtual environment: `source .venv/bin/activate`
 3. Install dependencies: `pip install -r requirements.txt`
 4. Copy the environment file template: `cp .env.example .env`
-5. Add your Twitter bearer token to `.env` using the `TWEEPY_BEARER_TOKEN` variable.
+5. Add your X API bearer token to `.env` using the `TWEEPY_BEARER_TOKEN` variable.
 
 ### Run the app
 From the repository root, start the FastAPI server:
