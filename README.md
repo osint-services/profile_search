@@ -21,7 +21,7 @@
 From the repository root, start the FastAPI server:
 
 ```bash
-uvicorn profile_search.server:app --reload
+fastapi dev server.py
 ```
 
 ### API Usage
@@ -33,6 +33,6 @@ Example:
 curl "http://127.0.0.1:8000/focus?url=https://twitter.com/Twitter"
 ```
 
-The service returns JSON metadata for the profile found at the provided URL.
+The service returns JSON metadata for the profile found at the provided URL. `GET /healthz` reports liveness. `GET /readyz` checks whether a bearer token is configured and returns HTTP 503 when it is missing.
 
 Provider failures are returned as actionable HTTP responses. For example, depleted X API credits return `402`, rate limiting returns `429`, invalid project access returns `502`, and a missing profile returns `404`. The response detail explains the corrective action without exposing credentials or raw provider internals.
